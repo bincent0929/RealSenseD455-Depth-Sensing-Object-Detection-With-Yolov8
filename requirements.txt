@@ -1,4 +1,1 @@
-opencv-python
-numpy
 pyrealsense2
-torch
