@@ -9,12 +9,19 @@ model = YOLO('yolov8s.pt')
 # Set up the RealSense D455 camera
 pipeline = rs.pipeline()
 config = rs.config()
-config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+IMAGE_WIDTH = 640
+config.enable_stream(rs.stream.color, IMAGE_WIDTH, 480, rs.format.bgr8, 30)
+# the rs.format.z16 is raw distance in millimeters
+config.enable_stream(rs.stream.depth, IMAGE_WIDTH, 480, rs.format.z16, 30)
 pipeline.start(config)
 
 # Set the depth scale
+# this value is used to convert the raw depth data from millimeters to meters
 depth_scale = 0.0010000000474974513
+
+# Camera parameters for heading calculation
+IMAGE_CENTER_X = IMAGE_WIDTH // 2
+HORIZONTAL_FOV = 87  # degrees for RealSense D455
 
 # Create spatial and temporal filters for depth image
 spatial = rs.spatial_filter()
@@ -54,18 +61,30 @@ try:
                 if confidence < 0.5:
                     continue  # Skip detections with low confidence
 
+                # Calculate the center of the bounding box
+                center_x = (x1 + x2) // 2
+                center_y = (y1 + y2) // 2
+                
+                # Calculate heading (angle from camera center)
+                # Positive angle = right, Negative angle = left
+                pixel_offset = center_x - IMAGE_CENTER_X
+                heading_angle = (pixel_offset / IMAGE_CENTER_X) * (HORIZONTAL_FOV / 2)
+                
                 # Calculate the distance to the object
                 object_depth = np.median(depth_image[y1:y2, x1:x2])
-                label = f"{object_depth:.2f}m"
+                label = f"{object_depth:.2f}m, {heading_angle:.1f}°"
 
                 # Draw a rectangle around the object
                 cv2.rectangle(color_image, (x1, y1), (x2, y2), (252, 119, 30), 2)
+                
+                # Draw a circle at the center point
+                cv2.circle(color_image, (center_x, center_y), 5, (0, 255, 0), -1)
 
                 # Draw the bounding box
                 cv2.putText(color_image, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (252, 119, 30), 2)
 
-                # Print the object's class and distance
-                print(f"{model.names[int(class_id)]}: {object_depth:.2f}m")
+                # Print the object's class, distance, heading, and center coordinates
+                print(f"{model.names[int(class_id)]}: {object_depth:.2f}m at {heading_angle:.1f}° (center: {center_x}, {center_y})")
 
         # Show the image
         cv2.imshow("Color Image", color_image)
