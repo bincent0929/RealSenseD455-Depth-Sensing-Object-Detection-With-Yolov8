@@ -4,7 +4,7 @@ import pyrealsense2 as rs
 from ultralytics import YOLO
 
 # Load the YOLOv8 model
-model = YOLO('yolov8s.pt')
+model = YOLO('yolo11s.pt')
 
 # Set up the RealSense D455 camera
 pipeline = rs.pipeline()
