@@ -38,7 +38,7 @@ class TurtleBot3MoveForward(Node):
         )
         
         # Movement parameters
-        self.linear_speed = 0.15  # m/s (safe speed for TurtleBot3 Burger)
+        self.linear_speed = 0.21  # m/s (safe speed for TurtleBot3 Burger)
         self.target_distance = 1.0  # meters
         
         # Position tracking
