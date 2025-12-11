@@ -1,3 +1,5 @@
 pyrealsense2
 # includes opencv
 ultralytics[export]
+# you also need to follow the ROS setup guide for the robot control libraries
+# follow that here: https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html

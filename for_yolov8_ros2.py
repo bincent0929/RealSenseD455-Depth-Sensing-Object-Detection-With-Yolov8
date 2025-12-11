@@ -23,7 +23,7 @@ class ObjectDetectionNode(Node):
         self.bridge = CvBridge()
         
         # Load the YOLOv8 model
-        self.model = YOLO('yolov8s.pt')
+        self.model = YOLO('yolo11s.pt')
         
         # Set up the RealSense D455 camera
         self.pipeline = rs.pipeline()
