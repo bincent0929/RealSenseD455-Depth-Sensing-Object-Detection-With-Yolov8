@@ -135,9 +135,14 @@ class TurtleBot3MoveForward(Node):
 
 
 def main():
+    print('What model of TurtleBot3 are you using?')
+    model = input().strip()
+    os.environ['TURTLEBOT3_MODEL'] = model
+
     print('=' * 50)
-    print('TurtleBot3 Burger - Move Forward 1 Meter')
+    print(f'TurtleBot3 {model} - Move Forward 1 Meter')
     print(f'ROS_DOMAIN_ID: {os.environ.get("ROS_DOMAIN_ID", "not set")}')
+    print(f'TURTLEBOT3_MODEL: {os.environ.get("TURTLEBOT3_MODEL", "not set")}')
     print('=' * 50)
     
     rclpy.init()
