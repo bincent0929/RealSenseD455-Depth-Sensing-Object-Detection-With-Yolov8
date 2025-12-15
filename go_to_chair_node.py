@@ -9,6 +9,7 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import os
 
+# Set environment variables for ROS2 and TurtleBot3
 os.environ['ROS_DOMAIN_ID'] = '55'
 os.environ['TURTLEBOT3_MODEL'] = 'burger'
 
@@ -23,7 +24,7 @@ class GoToChairNode(Node):
         
         self.bridge = CvBridge()
         
-        # Load the YOLOv8 model
+        # Load the YOLOv11 model
         # Using the model file present in the workspace
         self.model = YOLO('yolo11s.pt')
         
@@ -49,8 +50,8 @@ class GoToChairNode(Node):
         self.HORIZONTAL_FOV = 87  # degrees for RealSense D455
         
         # Control parameters
-        self.target_class = 'chair'
-        self.stop_distance = 1.0  # meters
+        self.target_class = 'person'
+        self.stop_distance = 1  # meters
         self.linear_speed = 0.2
         self.angular_speed = 0.3
         self.center_tolerance = 50 # pixels
@@ -139,9 +140,8 @@ class GoToChairNode(Node):
                         twist.angular.z = 0.0
                         self.get_logger().info(f"Reached {self.target_class}!")
             else:
-                # No chair detected, stop
-                twist.linear.x = 0.0
-                twist.angular.z = 0.0
+                # No chair detected, spin slowly until one is found
+                twist.angular.z = 0.2
             
             # Publish velocity command
             self.cmd_vel_pub.publish(twist)
