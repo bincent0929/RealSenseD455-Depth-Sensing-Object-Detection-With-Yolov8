@@ -14,9 +14,9 @@ os.environ['ROS_DOMAIN_ID'] = '55'
 os.environ['TURTLEBOT3_MODEL'] = 'burger'
 
 
-class GoToChairNode(Node):
+class GoToPersonNode(Node):
     def __init__(self):
-        super().__init__('go_to_chair_node')
+        super().__init__('go_to_person_node')
         
         # Publishers
         self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
@@ -59,7 +59,7 @@ class GoToChairNode(Node):
         # Timer for processing frames
         self.timer = self.create_timer(0.1, self.process_frame)  # 10Hz control loop
         
-        self.get_logger().info('Go To Chair Node Started')
+        self.get_logger().info('Go To Person Node Started')
     
     def process_frame(self):
         try:
@@ -82,7 +82,7 @@ class GoToChairNode(Node):
             target_distance = float('inf')
             target_center_x = 0
             
-            # Process the results to find the closest chair
+            # Process the results to find the closest person
             for result in results:
                 boxes = result.boxes
                 for box in boxes:
@@ -105,7 +105,7 @@ class GoToChairNode(Node):
                             if depth_crop.size > 0:
                                 dist = np.median(depth_crop) * self.depth_scale
                                 
-                                # Find the closest chair
+                                # Find the closest person
                                 if dist < target_distance and dist > 0:
                                     target_distance = dist
                                     target_box = (x1, y1, x2, y2)
@@ -140,7 +140,7 @@ class GoToChairNode(Node):
                         twist.angular.z = 0.0
                         self.get_logger().info(f"Reached {self.target_class}!")
             else:
-                # No chair detected, spin slowly until one is found
+                # No person detected, spin slowly until one is found
                 twist.angular.z = 0.2
             
             # Publish velocity command
@@ -164,7 +164,7 @@ class GoToChairNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = GoToChairNode()
+    node = GoToPersonNode()
     
     try:
         rclpy.spin(node)
