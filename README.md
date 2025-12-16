@@ -1,65 +1,44 @@
-Before you do this, install `uv` so that your `pip` installs don't get SUPER hung up.
+Firstly, you need to make sure that the robot is able to be reached using the normal process of connecting to it from Robotis. You want to make sure that you have a PC setup by following [this guide](https://emanual.robotis.com/docs/en/platform/turtlebot3/quick-start/#pc-setup) (during the ROS2 install step, you DO NOT need to install any more than the `ros-humble-ros-base` for ROS). Then get an SBC that is connected to the robot of your choice's motors through an OpenCR board or equivalent by following [this guide](https://emanual.robotis.com/docs/en/platform/turtlebot3/sbc_setup/#sbc-setup).
+***
+After you get all the ROS2 and Robotis packages onto your robot and host PC, you'll want to go ahead and set up a virtual environment on your host PC to download the Python libraries that will allow you to pull data from the depth camera and detect objects from the RGB data from the camera. 
 
-`pip install uv`
+!!!You don't need to worry about installing libraries for controlling your robot through `pip` like `rclpy` because those were already installed when you set up ROS2 on your Robotis robot!!!
 
-Basically a superset that's WAY more efficient than `pip`. 
+Before you get into downloading the packages through `pip`, it's best to set up `uv`. Check out what `uv` exactly is [here](https://github.com/astral-sh/uv). It's basically just a better implementation of `pip`, but the only reason I require it is because I've found that `pip` will just straight up fail with `ultralytics[export]` on certain devices (specifically on the Jetson).
 
-All you have to do to use it is place it in front of your `pip` commands.
-
-Like this:
+Now, when you want to download a `pip` library, just do it like this (and I'll use `ultralytics[export]` as the package here):
 ```
-uv pip install cool-package
+uv pip install ultralytics[export]
 ```
 ***
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-Heads up, the guide has you install torch and torchvision that don't support Jetpack 6.0!
+# How To Set This Up For Nvidia Jetson
+### BEFORE ANYTHING, MAKE SURE YOU HAVE THE CORRECT `Jetpack` VERSION ACCORDING TO THE REQUIREMENTS OF YOUR LIBRARIES/PACKAGES
+As of Dec. 15 2025, for getting this working, the limitation comes from `librealsense` for versioning of `Jetpack` for your Jetson to get this working.
 
-Use these instead when you reach that step:
+Whatever the guide says [here](https://github.com/realsenseai/librealsense/blob/master/doc/installation_jetson.md) for your board is what you want to **ENSURE** that you have installed.
+
+At the moment it says, "The method was verified with **Jetson AGX Thor™** with JetPack 7.0 (beta level), **Jetson AGX Orin™** with JetPack 6.0, **Jetson AGX Xavier™** boards with JetPack **5.0.2**\[L4T 35.1.0\]."
+
+For example, for the case of a Jetson Orin Nano Developer Kit to install the native backend, you'll want to install `Jetpack 6.0` onto your Jetson to make sure it the packages build correctly.
+## For installing `librealsense` and `pyrealsense2`
+From [this guide](https://github.com/realsenseai/librealsense/blob/master/doc/installation_jetson.md) follow the native backend guide steps.
+
+When you reach "**Build librealsense2 SDK**", make sure you download all the dependencies at the beginning of [the Ubuntu installation guide](https://github.com/realsenseai/librealsense/blob/master/doc/installation.md) that they point you to.
+
+As long as this build completes, you should be good to plug in your camera and see that it works with the `realsense-viewer`.
+
+If it does work, go ahead and go into the code folder for this code and create a Python virtual environment and run `uv pip install pyrealsense2`.
+## For installing `ultralytics`/`yolo`
+Follow [this](https://docs.ultralytics.com/guides/nvidia-jetson/#install-ultralytics-package_1) to get it installed.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Heads up, the guide has you install `torch` and `torchvision` that don't support `Jetpack 6.0`!
+
+Use these instead when you reach that step (they are just the previous versions of the `.whl` files that they tell you to use in the guide):
 [correct torch wheel from ultralytics](https://github.com/ultralytics/assets/releases/download/v0.0.0/torch-2.3.0-cp310-cp310-linux_aarch64.whl)
 [correct torchvision wheel from ultralytics](https://github.com/ultralytics/assets/releases/download/v0.0.0/torchvision-0.18.0a0+6043bc2-cp310-cp310-linux_aarch64.whl)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ***
-Now, to get started, you need to follow [this](https://docs.ultralytics.com/guides/nvidia-jetson/#install-ultralytics-package_1) to make it work WAY better than just plain doing a `pip install`!
 
-# RealSense Depth Sensing Object Detection with YOLOv5
 
-This repository aims to integrate the RealSense D455 Depth Sensing Camera with the YOLOv5 object detection algorithm for enhanced object detection accuracy and performance. By incorporating depth information, the project strives to improve object localization and recognition in real-world environments.
-
-## Features
-
-- Integration of the RealSense D455 Depth Sensing Camera with YOLOv5
-- Utilizes depth information for more precise object localization
-- Improved accuracy and robustness in object detection
-- Real-time object detection and depth visualization
-
-## Prerequisites
-
-- Python 3.x
-- Intel RealSense SDK
-- PyTorch
-- OpenCV
-- Other necessary dependencies (listed in requirements.txt)
-
-## Installation
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/Paulraj916/YOLOv5_with_RealSense_D455_Depth_Sensing.git
-   ```
-   
-2. Install the required dependencies:
-
-    ```bash
-   pip install -r requirements.txt
-    ```
-    
-3. Run the main script:
-
-    ```bash
-   python  depthScale_realsense.py
-    ```
-## Demo
-
-![Demo of this project](view.gif)
-sample video [here](https://youtu.be/FH7up4knf6w)
+# RealSense Depth Sensing Object Detection with YOLO11
