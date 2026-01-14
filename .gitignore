@@ -33,3 +33,6 @@ checkpoints/
 # DevContainer artifacts
 .devcontainer/.env
 .devcontainer/docker-compose.override.yml
+
+# Claude Code chat transcripts
+.claude-chats/

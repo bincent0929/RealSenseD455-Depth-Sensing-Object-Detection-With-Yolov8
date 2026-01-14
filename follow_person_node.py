@@ -13,7 +13,10 @@ import os
 os.environ['ROS_DOMAIN_ID'] = '55'
 os.environ['TURTLEBOT3_MODEL'] = 'burger'
 
-
+"""
+Builds off the rclpy node to incorporate Realsense data and functionality
+incorporating it.
+"""
 class GoToPersonNode(Node):
     def __init__(self):
         super().__init__('go_to_person_node')
@@ -178,6 +181,13 @@ class GoToPersonNode(Node):
         return twist
 
     def process_frame(self):
+        """process_frame
+        
+        :param self: Any data saved to the node object.
+
+        This is basically the main loop of the program. _init sets it up and this just runs over and over.
+        As described above it runs at 10hz.
+        """
         try:
             # Get the latest frame from the camera
             frames = self.pipeline.wait_for_frames(timeout_ms=100)
@@ -201,14 +211,14 @@ class GoToPersonNode(Node):
                 target_box, target_distance, target_center_x
             )
 
-            # Annotate image if target found
-            if target_box:
-                self._annotate_image(color_image, target_box, target_distance)
-
             # Publish velocity command
             self.cmd_vel_pub.publish(twist)
 
-            # Publish annotated image
+            # Annotates and publishs an annotated image
+            # to the ROS topics.
+            if target_box:
+                self._annotate_image(color_image, target_box, target_distance)
+
             image_msg = self.bridge.cv2_to_imgmsg(color_image, encoding='bgr8')
             self.image_pub.publish(image_msg)
 
@@ -220,6 +230,12 @@ class GoToPersonNode(Node):
             self.get_logger().error(f'Error processing frame: {str(e)}')
     
     def destroy_node(self):
+        """destroy_node
+        
+        :param self: Any data saved to the node object.
+
+        See the name :).
+        """
         self.pipeline.stop()
         cv2.destroyAllWindows()
         super().destroy_node()
