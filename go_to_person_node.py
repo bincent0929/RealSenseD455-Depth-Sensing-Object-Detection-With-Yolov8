@@ -9,34 +9,40 @@ from cv_bridge import CvBridge
 import os
 
 # Set environment variables for ROS2 and TurtleBot3
-os.environ['ROS_DOMAIN_ID'] = '55'
-os.environ['TURTLEBOT3_MODEL'] = 'burger'
+os.environ["ROS_DOMAIN_ID"] = "55"
+os.environ["TURTLEBOT3_MODEL"] = "burger"
 
 """
 Builds off the rclpy node to incorporate Realsense data and functionality
 incorporating it.
 """
+
+
 class GoToPersonNode(Node):
     def __init__(self):
-        super().__init__('go_to_person_node')
+        super().__init__("go_to_person_node")
 
         # Publishers
-        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
-        self.image_pub = self.create_publisher(Image, '/detected_object/image', 10)
+        self.cmd_vel_pub = self.create_publisher(Twist, "/cmd_vel", 10)
+        self.image_pub = self.create_publisher(Image, "/detected_object/image", 10)
 
         self.bridge = CvBridge()
 
         # Load the YOLOv11 model
         # Using the model file present in the workspace
-        self.model = YOLO('yolo11s.pt')
+        self.model = YOLO("yolo11s.pt")
 
         # Set up the RealSense D455 camera
         self.pipeline = rs.pipeline()
         config = rs.config()
         self.IMAGE_WIDTH = 640
         self.IMAGE_HEIGHT = 480
-        config.enable_stream(rs.stream.color, self.IMAGE_WIDTH, self.IMAGE_HEIGHT, rs.format.bgr8, 30)
-        config.enable_stream(rs.stream.depth, self.IMAGE_WIDTH, self.IMAGE_HEIGHT, rs.format.z16, 30)
+        config.enable_stream(
+            rs.stream.color, self.IMAGE_WIDTH, self.IMAGE_HEIGHT, rs.format.bgr8, 30
+        )
+        config.enable_stream(
+            rs.stream.depth, self.IMAGE_WIDTH, self.IMAGE_HEIGHT, rs.format.z16, 30
+        )
 
         try:
             self.pipeline.start(config)
@@ -52,16 +58,16 @@ class GoToPersonNode(Node):
         self.HORIZONTAL_FOV = 87  # degrees for RealSense D455
 
         # Control parameters
-        self.target_class = 'person'
+        self.target_class = "person"
         self.stop_distance = 1  # meters
         self.linear_speed = 0.2
         self.angular_speed = 0.3
-        self.center_tolerance = 50 # pixels
+        self.center_tolerance = 50  # pixels
 
         # Timer for processing frames
         self.timer = self.create_timer(0.1, self._process_frame)  # 10Hz control loop
 
-        self.get_logger().info('Go To Person Node Started')
+        self.get_logger().info("Go To Person Node Started")
 
     def _calculate_distance(self, depth_image, x1, y1, x2, y2):
         """Calculate median distance in meters from a bounding box region.
@@ -101,7 +107,7 @@ class GoToPersonNode(Node):
         results = self.model(color_image, verbose=False)
 
         target_box = None
-        target_distance = float('inf')
+        target_distance = float("inf")
         target_center_x = 0
 
         # Process the results to find the closest person
@@ -139,7 +145,15 @@ class GoToPersonNode(Node):
         x1, y1, x2, y2 = target_box
         cv2.rectangle(color_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
         label = f"{self.target_class} {target_distance:.2f}m"
-        cv2.putText(color_image, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+        cv2.putText(
+            color_image,
+            label,
+            (x1, y1 - 10),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.9,
+            (0, 255, 0),
+            2,
+        )
 
     def _compute_velocity_command(self, target_box, target_distance, target_center_x):
         """Compute robot velocity command based on detection results.
@@ -218,7 +232,7 @@ class GoToPersonNode(Node):
             if target_box:
                 self._annotate_image(color_image, target_box, target_distance)
 
-            image_msg = self.bridge.cv2_to_imgmsg(color_image, encoding='bgr8')
+            image_msg = self.bridge.cv2_to_imgmsg(color_image, encoding="bgr8")
             self.image_pub.publish(image_msg)
 
             # Optional: Show image locally if GUI is available
@@ -226,7 +240,7 @@ class GoToPersonNode(Node):
             # cv2.waitKey(1)
 
         except Exception as e:
-            self.get_logger().error(f'Error processing frame: {str(e)}')
+            self.get_logger().error(f"Error processing frame: {str(e)}")
 
     def destroy_node(self):
         """destroy_node

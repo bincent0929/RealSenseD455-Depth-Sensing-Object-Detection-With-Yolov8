@@ -1,6 +1,7 @@
 from go_to_person_node import GoToPersonNode
 import rclpy
 
+
 def main(args=None):
     rclpy.init(args=args)
     node = GoToPersonNode()
@@ -13,6 +14,6 @@ def main(args=None):
         node.destroy_node()
         rclpy.shutdown()
 
-if __name__ == '__main__':
-    main()
 
+if __name__ == "__main__":
+    main()

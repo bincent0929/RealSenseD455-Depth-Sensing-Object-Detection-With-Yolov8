@@ -4,7 +4,7 @@ import pyrealsense2 as rs
 from ultralytics import YOLO
 
 # Load the YOLOv8 model
-model = YOLO('yolo11s.pt')
+model = YOLO("yolo11s.pt")
 
 # Set up the RealSense D455 camera
 pipeline = rs.pipeline()
@@ -64,27 +64,37 @@ try:
                 # Calculate the center of the bounding box
                 center_x = (x1 + x2) // 2
                 center_y = (y1 + y2) // 2
-                
+
                 # Calculate heading (angle from camera center)
                 # Positive angle = right, Negative angle = left
                 pixel_offset = center_x - IMAGE_CENTER_X
                 heading_angle = (pixel_offset / IMAGE_CENTER_X) * (HORIZONTAL_FOV / 2)
-                
+
                 # Calculate the distance to the object
                 object_depth = np.median(depth_image[y1:y2, x1:x2])
                 label = f"{object_depth:.2f}m, {heading_angle:.1f}°"
 
                 # Draw a rectangle around the object
                 cv2.rectangle(color_image, (x1, y1), (x2, y2), (252, 119, 30), 2)
-                
+
                 # Draw a circle at the center point
                 cv2.circle(color_image, (center_x, center_y), 5, (0, 255, 0), -1)
 
                 # Draw the bounding box
-                cv2.putText(color_image, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (252, 119, 30), 2)
+                cv2.putText(
+                    color_image,
+                    label,
+                    (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.9,
+                    (252, 119, 30),
+                    2,
+                )
 
                 # Print the object's class, distance, heading, and center coordinates
-                print(f"{model.names[int(class_id)]}: {object_depth:.2f}m at {heading_angle:.1f}° (center: {center_x}, {center_y})")
+                print(
+                    f"{model.names[int(class_id)]}: {object_depth:.2f}m at {heading_angle:.1f}° (center: {center_x}, {center_y})"
+                )
 
         # Show the image
         cv2.imshow("Color Image", color_image)
