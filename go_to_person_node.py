@@ -12,13 +12,13 @@ import os
 os.environ["ROS_DOMAIN_ID"] = "55"
 os.environ["TURTLEBOT3_MODEL"] = "burger"
 
-"""
-Builds off the rclpy node to incorporate Realsense data and functionality
-incorporating it.
-"""
-
 
 class GoToPersonNode(Node):
+    """
+    Builds off the rclpy node to incorporate Realsense data and functionality
+    incorporating it.
+    """
+
     def __init__(self):
         super().__init__("go_to_person_node")
 
