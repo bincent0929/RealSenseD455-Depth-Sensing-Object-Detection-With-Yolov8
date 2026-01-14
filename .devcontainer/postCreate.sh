@@ -9,6 +9,17 @@ echo "=========================================="
 # Ensure we're in the workspace
 cd /workspace
 
+# Configure git if not already set
+echo "✓ Configuring git..."
+if ! git config --global user.email > /dev/null 2>&1; then
+    git config --global user.email "ghub@varmail.org"
+    echo "  - Set git email: ghub@varmail.org"
+fi
+if ! git config --global user.name > /dev/null 2>&1; then
+    git config --global user.name "Vincent Roberson"
+    echo "  - Set git name: Vincent Roberson"
+fi
+
 # Test ROS2 installation
 echo "✓ Testing ROS2 installation..."
 source /opt/ros/humble/setup.bash

@@ -60,100 +60,162 @@ class GoToPersonNode(Node):
         self.timer = self.create_timer(0.1, self.process_frame)  # 10Hz control loop
         
         self.get_logger().info('Go To Person Node Started')
-    
+
+    def _calculate_distance(self, depth_image, x1, y1, x2, y2):
+        """Calculate median distance in meters from a bounding box region.
+
+        Args:
+            depth_image: The depth frame as numpy array
+            x1, y1, x2, y2: Bounding box coordinates
+
+        Returns:
+            Distance in meters, or 0 if invalid
+        """
+        # Clamp coordinates to image dimensions
+        x1 = max(0, x1)
+        y1 = max(0, y1)
+        x2 = min(self.IMAGE_WIDTH, x2)
+        y2 = min(self.IMAGE_HEIGHT, y2)
+
+        if x2 > x1 and y2 > y1:
+            depth_crop = depth_image[y1:y2, x1:x2]
+            if depth_crop.size > 0:
+                dist = np.median(depth_crop) * self.depth_scale
+                return dist if dist > 0 else 0
+        return 0
+
+    def _find_closest_person(self, color_image, depth_image):
+        """Find the closest person in the camera view.
+
+        Args:
+            color_image: The color frame as numpy array
+            depth_image: The depth frame as numpy array
+
+        Returns:
+            Tuple of (target_box, target_distance, target_center_x) or (None, None, None)
+            where target_box is (x1, y1, x2, y2)
+        """
+        # Detect objects using YOLO
+        results = self.model(color_image, verbose=False)
+
+        target_box = None
+        target_distance = float('inf')
+        target_center_x = 0
+
+        # Process the results to find the closest person
+        for result in results:
+            boxes = result.boxes
+            for box in boxes:
+                class_id = int(box.cls[0].cpu().numpy())
+                class_name = self.model.names[class_id]
+
+                if class_name == self.target_class:
+                    x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int)
+
+                    # Calculate distance using helper method
+                    dist = self._calculate_distance(depth_image, x1, y1, x2, y2)
+
+                    # Find the closest person
+                    if dist < target_distance and dist > 0:
+                        target_distance = dist
+                        target_box = (x1, y1, x2, y2)
+                        target_center_x = (x1 + x2) // 2
+
+        if target_box is None:
+            return None, None, None
+
+        return target_box, target_distance, target_center_x
+
+    def _annotate_image(self, color_image, target_box, target_distance):
+        """Draw bounding box and label on the image.
+
+        Args:
+            color_image: The image to annotate (modified in-place)
+            target_box: Tuple of (x1, y1, x2, y2) bounding box coordinates
+            target_distance: Distance to target in meters
+        """
+        x1, y1, x2, y2 = target_box
+        cv2.rectangle(color_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        label = f"{self.target_class} {target_distance:.2f}m"
+        cv2.putText(color_image, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+
+    def _compute_velocity_command(self, target_box, target_distance, target_center_x):
+        """Compute robot velocity command based on detection results.
+
+        Args:
+            target_box: Bounding box tuple or None if no target
+            target_distance: Distance to target in meters
+            target_center_x: X coordinate of target center in image
+
+        Returns:
+            Twist message with velocity commands
+        """
+        twist = Twist()
+
+        if target_box:
+            # Navigation logic
+            pixel_offset = self.IMAGE_CENTER_X - target_center_x
+
+            # Rotation
+            if abs(pixel_offset) > self.center_tolerance:
+                # Turn towards the object
+                # If object is to the left (center_x < image_center), pixel_offset is positive
+                # We need to turn left (positive angular velocity)
+                twist.angular.z = self.angular_speed * (1 if pixel_offset > 0 else -1)
+            else:
+                # Centered, check distance
+                if target_distance > self.stop_distance:
+                    twist.linear.x = self.linear_speed
+                else:
+                    # Arrived
+                    twist.linear.x = 0.0
+                    twist.angular.z = 0.0
+                    self.get_logger().info(f"Reached {self.target_class}!")
+        else:
+            # No person detected, spin slowly until one is found
+            twist.angular.z = 0.2
+
+        return twist
+
     def process_frame(self):
         try:
             # Get the latest frame from the camera
             frames = self.pipeline.wait_for_frames(timeout_ms=100)
             color_frame = frames.get_color_frame()
             depth_frame = frames.get_depth_frame()
-            
+
             if not color_frame or not depth_frame:
                 return
-            
+
             # Convert the frames to numpy arrays
             color_image = np.asanyarray(color_frame.get_data())
             depth_image = np.asanyarray(depth_frame.get_data())
-            
-            # Detect objects using YOLO
-            results = self.model(color_image, verbose=False)
-            
-            target_box = None
-            target_distance = float('inf')
-            target_center_x = 0
-            
-            # Process the results to find the closest person
-            for result in results:
-                boxes = result.boxes
-                for box in boxes:
-                    class_id = int(box.cls[0].cpu().numpy())
-                    class_name = self.model.names[class_id]
-                    
-                    if class_name == self.target_class:
-                        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int)
-                        
-                        # Calculate distance
-                        # Using median depth in the bounding box
-                        # Clamp coordinates to image dimensions
-                        x1 = max(0, x1)
-                        y1 = max(0, y1)
-                        x2 = min(self.IMAGE_WIDTH, x2)
-                        y2 = min(self.IMAGE_HEIGHT, y2)
-                        
-                        if x2 > x1 and y2 > y1:
-                            depth_crop = depth_image[y1:y2, x1:x2]
-                            if depth_crop.size > 0:
-                                dist = np.median(depth_crop) * self.depth_scale
-                                
-                                # Find the closest person
-                                if dist < target_distance and dist > 0:
-                                    target_distance = dist
-                                    target_box = (x1, y1, x2, y2)
-                                    target_center_x = (x1 + x2) // 2
 
-            # Control Logic
-            twist = Twist()
-            
+            # Detect closest person
+            target_box, target_distance, target_center_x = self._find_closest_person(
+                color_image, depth_image
+            )
+
+            # Compute velocity command
+            twist = self._compute_velocity_command(
+                target_box, target_distance, target_center_x
+            )
+
+            # Annotate image if target found
             if target_box:
-                # Draw bounding box
-                x1, y1, x2, y2 = target_box
-                cv2.rectangle(color_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                label = f"{self.target_class} {target_distance:.2f}m"
-                cv2.putText(color_image, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-                
-                # Navigation logic
-                pixel_offset = self.IMAGE_CENTER_X - target_center_x
-                
-                # Rotation
-                if abs(pixel_offset) > self.center_tolerance:
-                    # Turn towards the object
-                    # If object is to the left (center_x < image_center), pixel_offset is positive
-                    # We need to turn left (positive angular velocity)
-                    twist.angular.z = self.angular_speed * (1 if pixel_offset > 0 else -1)
-                else:
-                    # Centered, check distance
-                    if target_distance > self.stop_distance:
-                        twist.linear.x = self.linear_speed
-                    else:
-                        # Arrived
-                        twist.linear.x = 0.0
-                        twist.angular.z = 0.0
-                        self.get_logger().info(f"Reached {self.target_class}!")
-            else:
-                # No person detected, spin slowly until one is found
-                twist.angular.z = 0.2
-            
+                self._annotate_image(color_image, target_box, target_distance)
+
             # Publish velocity command
             self.cmd_vel_pub.publish(twist)
-            
+
             # Publish annotated image
             image_msg = self.bridge.cv2_to_imgmsg(color_image, encoding='bgr8')
             self.image_pub.publish(image_msg)
-            
+
             # Optional: Show image locally if GUI is available
             # cv2.imshow("Robot View", color_image)
             # cv2.waitKey(1)
-            
+
         except Exception as e:
             self.get_logger().error(f'Error processing frame: {str(e)}')
     

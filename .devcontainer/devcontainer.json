@@ -1,5 +1,5 @@
 {
-  "name": "RealSense-YOLOv8-ROS2-Humble-DevEnv",
+  "name": "RealSense-YOLO-ROS2-Humble-DevEnv",
   "build": {
     "dockerfile": "Dockerfile",
     "context": "..",
@@ -27,7 +27,8 @@
         "ms-python.black-formatter",
         "ms-python.isort",
         "charliermarsh.ruff",
-        "Ranch-Hand-Robotics.rde-pack"
+        "Ranch-Hand-Robotics.rde-pack",
+        "Anthropic.claude-code"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/usr/bin/python3",
@@ -47,6 +48,9 @@
       }
     }
   },
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/home/ros/.gitconfig,type=bind,consistency=cached"
+  ],
   "postCreateCommand": "bash .devcontainer/postCreate.sh",
   "remoteUser": "ros",
   "workspaceFolder": "/workspace",
